@@ -1,6 +1,7 @@
 package CGI::Application::Plugin::Session;
 
-use CGI::Session;
+use CGI::Session ();
+use File::Spec ();
 use CGI::Application 3.21;
 
 use strict;
@@ -15,7 +16,7 @@ require Exporter;
 );
 sub import { goto &Exporter::import }
 
-$VERSION = '0.04';
+$VERSION = '0.06';
 
 sub session {
     my $self = shift;
@@ -24,14 +25,22 @@ sub session {
         # define the config hash if it doesn't exist to save some checks later
         $self->{__SESSION_CONFIG} = {} unless $self->{__SESSION_CONFIG};
 
-        # create CGI::Session object
-        if ($self->{__SESSION_CONFIG}->{CGI_SESSION_OPTIONS}) {
-            # use the parameters the user supplied
-            $self->{__SESSION} = CGI::Session->new(@{ $self->{__SESSION_CONFIG}->{CGI_SESSION_OPTIONS} });
-        } else {
-            # use some sane defaults
-            $self->{__SESSION} = CGI::Session->new('driver:File', $self->query, {Directory=>'/tmp'});
+        # gather parameters for the CGI::Session module from the user,
+        #  or use some sane defaults
+        my @params = ($self->{__SESSION_CONFIG}->{CGI_SESSION_OPTIONS}) ?
+                        @{ $self->{__SESSION_CONFIG}->{CGI_SESSION_OPTIONS} } :
+                        ('driver:File', $self->query, {Directory=>File::Spec->tmpdir});
+
+
+        # CGI::Session only works properly with CGI.pm so extract the sid manually if
+        # another module is being used
+        if (ref $params[1] && ref $params[1] ne 'CGI') {
+            my $sid = $params[1]->cookie(CGI::Session->name) || $params[1]->param(CGI::Session->name);
+            $params[1] = $sid;
         }
+
+        # create CGI::Session object
+        $self->{__SESSION} = CGI::Session->new(@params);
 
         # add the cookie to the outgoing headers
         #  only add the cookie if it doesn't exist,
@@ -183,6 +192,9 @@ For example you could provide an expiry time for the cookie by passing -expiry =
 The -name and -value parameters for the cookie will be added automatically unless
 you specifically override them by providing -name and/or -value parameters.
 See the L<CGI::Cookie> docs for the exact syntax of the parameters.
+
+NOTE:  If you change the name of the cookie by passing a -name parameter, remember to notify
+CGI::Session of the change by calling CGI::Session->name('new_cookie_name').
 
 =item SEND_COOKIE
 

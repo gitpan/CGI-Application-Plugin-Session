@@ -1,5 +1,15 @@
 Revision history for Perl extension CGI::Application::Plugin::Session.
 
+0.06  Tue Oct 19 22:15:48 EST 2004
+
+    - CGI::Session will currently only work with CGI.pm so check to see
+      if CGI::Application is configured to use another CGI.pm like
+      module like CGI::Simple
+    - Be more intelligent about choosing a default temporary directory
+      for windows users (suggested by Dan Horne)
+    - Add a doc note to warn users when they change the name of the
+      cookie, to also notify CGI::Session->name
+
 0.05  Sun Sep 19 18:13:03 EST 2004
 
     - scrap CGI::Application::Plugin support for simple Exporter

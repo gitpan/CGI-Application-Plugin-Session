@@ -6,6 +6,7 @@ Module::Build->new(
     requires => {
         'CGI::Application' => 3.21,
         'CGI::Session'     => 3.95,
+        'File::Spec'       => 0,
     },
     create_makefile_pl => 'traditional',
     create_readme => 1,

@@ -8,7 +8,11 @@ README
 t/01_basic.t
 t/02_cookie.t
 t/03_nocookie.t
+t/04_cgisimple.t
+t/05_sid.t
 t/99_pod.t
 t/TestAppBasic.pm
+t/TestAppCGISimple.pm
 t/TestAppCookie.pm
 t/TestAppNoCookie.pm
+t/TestAppSid.pm

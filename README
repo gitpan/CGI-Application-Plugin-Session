@@ -76,6 +76,10 @@ METHODS
         parameters. See the CGI::Cookie docs for the exact syntax of the
         parameters.
 
+        NOTE: If you change the name of the cookie by passing a -name
+        parameter, remember to notify CGI::Session of the change by calling
+        CGI::Session->name('new_cookie_name').
+
     SEND_COOKIE
         If set to a true value, the module will automatically add a cookie
         header to the outgoing headers. This option defaults to true. If it
