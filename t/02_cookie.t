@@ -1,4 +1,5 @@
 use Test::More tests => 7;
+use File::Spec;
 BEGIN { use_ok('CGI::Application::Plugin::Session') };
 
 use lib './t';
@@ -26,9 +27,9 @@ like($t1_output, qr/path=\/testpath;/, 'path found in cookie');
 # check domain
 like($t1_output, qr/expires=/, 'expires found in cookie');
 
-# Session object will not dissapear and be written
+# Session object will not disappear and be written
 # to disk until it is DESTROYed
 undef $t1_obj;
 
-unlink 't/cgisess_'.$id1;
+unlink File::Spec->catdir('t', 'cgisess_'.$id1);
 

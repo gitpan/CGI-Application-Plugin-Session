@@ -16,19 +16,19 @@ require Exporter;
 );
 sub import { goto &Exporter::import }
 
-$VERSION = '0.06';
+$VERSION = '0.07';
 
 sub session {
     my $self = shift;
 
-    if (!$self->{__SESSION}) {
+    if (!$self->{__CAP__SESSION_OBJ}) {
         # define the config hash if it doesn't exist to save some checks later
-        $self->{__SESSION_CONFIG} = {} unless $self->{__SESSION_CONFIG};
+        $self->{__CAP__SESSION_CONFIG} = {} unless $self->{__CAP__SESSION_CONFIG};
 
         # gather parameters for the CGI::Session module from the user,
         #  or use some sane defaults
-        my @params = ($self->{__SESSION_CONFIG}->{CGI_SESSION_OPTIONS}) ?
-                        @{ $self->{__SESSION_CONFIG}->{CGI_SESSION_OPTIONS} } :
+        my @params = ($self->{__CAP__SESSION_CONFIG}->{CGI_SESSION_OPTIONS}) ?
+                        @{ $self->{__CAP__SESSION_CONFIG}->{CGI_SESSION_OPTIONS} } :
                         ('driver:File', $self->query, {Directory=>File::Spec->tmpdir});
 
 
@@ -40,28 +40,34 @@ sub session {
         }
 
         # create CGI::Session object
-        $self->{__SESSION} = CGI::Session->new(@params);
+        $self->{__CAP__SESSION_OBJ} = CGI::Session->new(@params);
 
-        # add the cookie to the outgoing headers
-        #  only add the cookie if it doesn't exist,
-        #  or if the session ID doesn't match what is in the
-        #  current cookie
-        if (!defined $self->{__SESSION_CONFIG}->{SEND_COOKIE} || $self->{__SESSION_CONFIG}->{SEND_COOKIE}) {
+        # Set the default expiry if requested and if this is a new session
+        if ($self->{__CAP__SESSION_CONFIG}->{DEFAULT_EXPIRY} && $self->{__CAP__SESSION_OBJ}->is_new) {
+            $self->{__CAP__SESSION_OBJ}->expire($self->{__CAP__SESSION_CONFIG}->{DEFAULT_EXPIRY});
+        }
+
+        # add the cookie to the outgoing headers under the following conditions
+        #  if the cookie doesn't exist,
+        #  or if the session ID doesn't match what is in the current cookie,
+        #  or if the session has an expiry set on it
+        #  but don't send it if SEND_COOKIE is set to 0
+        if (!defined $self->{__CAP__SESSION_CONFIG}->{SEND_COOKIE} || $self->{__CAP__SESSION_CONFIG}->{SEND_COOKIE}) {
             my $cid = $self->query->cookie(CGI::Session->name);
-            if (!$cid || $cid ne $self->{__SESSION}->id) {
-                $self->session_cookie;
+            if (!$cid || $cid ne $self->{__CAP__SESSION_OBJ}->id || $self->{__CAP__SESSION_OBJ}->expire()) {
+                session_cookie($self);
             }
         }
     }
 
-    return $self->{__SESSION};
+    return $self->{__CAP__SESSION_OBJ};
 }
 
 sub session_config {
     my $self = shift;
 
     if (@_) {
-      die "Calling session_config after the session has already been created" if (defined $self->{__SESSION});
+      die "Calling session_config after the session has already been created" if (defined $self->{__CAP__SESSION_OBJ});
       my $props;
       if (ref($_[0]) eq 'HASH') {
           my $rthash = %{$_[0]};
@@ -73,25 +79,30 @@ sub session_config {
       # Check for CGI_SESSION_OPTIONS
       if ($props->{CGI_SESSION_OPTIONS}) {
         die "session_config error:  parameter CGI_SESSION_OPTIONS is not an array reference" if ref $props->{CGI_SESSION_OPTIONS} ne 'ARRAY';
-        $self->{__SESSION_CONFIG}->{CGI_SESSION_OPTIONS} = delete $props->{CGI_SESSION_OPTIONS};
+        $self->{__CAP__SESSION_CONFIG}->{CGI_SESSION_OPTIONS} = delete $props->{CGI_SESSION_OPTIONS};
       }
 
       # Check for COOKIE_PARAMS
       if ($props->{COOKIE_PARAMS}) {
         die "session_config error:  parameter COOKIE_PARAMS is not a hash reference" if ref $props->{COOKIE_PARAMS} ne 'HASH';
-        $self->{__SESSION_CONFIG}->{COOKIE_PARAMS} = delete $props->{COOKIE_PARAMS};
+        $self->{__CAP__SESSION_CONFIG}->{COOKIE_PARAMS} = delete $props->{COOKIE_PARAMS};
       }
 
       # Check for SEND_COOKIE
       if (defined $props->{SEND_COOKIE}) {
-        $self->{__SESSION_CONFIG}->{SEND_COOKIE} = (delete $props->{SEND_COOKIE}) ? 1 : 0;
+        $self->{__CAP__SESSION_CONFIG}->{SEND_COOKIE} = (delete $props->{SEND_COOKIE}) ? 1 : 0;
+      }
+
+      # Check for DEFAULT_EXPIRY
+      if (defined $props->{DEFAULT_EXPIRY}) {
+        $self->{__CAP__SESSION_CONFIG}->{DEFAULT_EXPIRY} = delete $props->{DEFAULT_EXPIRY};
       }
 
       # If there are still entries left in $props then they are invalid
       die "Invalid option(s) (".join(', ', keys %$props).") passed to session_config" if %$props;
     }
 
-    $self->{__SESSION_CONFIG};
+    $self->{__CAP__SESSION_CONFIG};
 }
 
 sub session_cookie {
@@ -99,15 +110,31 @@ sub session_cookie {
     my %options = @_;
 
     # merge in any parameters set by config_session
-    if ($self->{__SESSION_CONFIG}->{COOKIE_PARAMS}) {
-      %options = (%{ $self->{__SESSION_CONFIG}->{COOKIE_PARAMS} }, %options);
+    if ($self->{__CAP__SESSION_CONFIG}->{COOKIE_PARAMS}) {
+      %options = (%{ $self->{__CAP__SESSION_CONFIG}->{COOKIE_PARAMS} }, %options);
+    }
+    
+    if (!$self->{__CAP__SESSION_OBJ}) {
+        # The session object has not been created yet, so make sure we at least call it once
+        my $tmp = $self->session;
     }
 
-    $options{'-name'}  ||= CGI::Session->name;
-    $options{'-value'} ||= $self->session->id;
-    $options{'-path'}  ||= '/';
+    $options{'-name'}    ||= CGI::Session->name;
+    $options{'-value'}   ||= $self->session->id;
+    $options{'-expires'} ||= _build_exp_time( $self->session->expires() ) if defined $self->session->expires();
     my $cookie = $self->query->cookie(%options);
     $self->header_add(-cookie => [$cookie]);
+}
+
+sub _build_exp_time {
+    my $secs_until_expiry = shift;
+    return unless defined $secs_until_expiry;
+
+    # Add a plus sign unless the number is negative
+    my $prefix = ($secs_until_expiry >= 0) ? '+' : '';
+
+    # Add an 's' for "seconds".
+    return $prefix.$secs_until_expiry.'s';
 }
 
 1;
@@ -185,6 +212,13 @@ This allows you to customize how the L<CGI::Session> object is created by provid
 options that will be passed to the L<CGI::Session> constructor.  Please see the documentation
 for L<CGI::Session> for the exact syntax of the parameters.
 
+=item DEFAULT_EXPIRY
+
+L<CGI::Session> Allows you to set an expiry time for the session.  You can set the
+DEFAULT_EXPIRY option to have a default expiry time set for all newly created sessions.
+It takes the same format as the $session->expiry method of L<CGI::Session> takes.
+Note that it is only set for new session, not when a session is reloaded from the store.
+
 =item COOKIE_PARAMS
 
 This allows you to customize the options that are used when creating the session cookie.
@@ -233,9 +267,16 @@ expiry and domain on the cookie.
 
 This method will add a cookie to the outgoing headers containing
 the session ID that was assigned by the CGI::Session module.
-This method is called automatically the first time $self->session
-is accessed (unless SEND_COOKIE was set to false), so it will most
-likely never need to be called manually.
+
+This method is called automatically the first time $self->session is accessed
+if SEND_COOKIE was set true, which is the default, so it will most likely never
+need to be called manually.
+
+NOTE that if you do choose to call it manually that a session object will
+automatically be created if it doesn't already exist.  This removes the lazy
+loading benefits of the plugin where a session is only created/loaded when
+it is required.
+
 It could be useful if you want to force the cookie header to be
 sent out even if the session is not used on this request, or if
 you want to manage the headers yourself by turning SEND_COOKIE to
@@ -258,6 +299,7 @@ In a CGI::Application module:
     # Configure the session
     $self->session_config(
        CGI_SESSION_OPTIONS => [ "driver:PostgreSQL;serializer:Storable", $self->query, {Handle=>$self->dbh} ],
+       DEFAULT_EXPIRY      => '+1w',
        COOKIE_PARAMS       => {
                                 -expires => '+24h',
                                 -path    => '/',
@@ -290,12 +332,6 @@ In a CGI::Application module:
   }
 
 
-=head1 BUGS
-
-This is alpha software and as such, the features and interface
-are subject to change.  So please check the Changes file when upgrading.
-
-
 =head1 TODO
 
 =over 4
@@ -309,6 +345,10 @@ like L<Apache::Session> and possibly others if there is a demand.
 
 Possibly add some tests to make sure cookies are accepted by the client.
 
+=item *
+
+Allow a callback to be executed right after a session has been created
+
 =back
 
 
@@ -319,12 +359,12 @@ L<CGI::Application>, L<CGI::Session>, perl(1)
 
 =head1 AUTHOR
 
-Cees Hek <cees@crtconsulting.ca>
+Cees Hek <ceeshek@gmail.com>
 
 
 =head1 LICENSE
 
-Copyright (C) 2004 Cees Hek <cees@crtconsulting.ca>
+Copyright (C) 2004, 2005 Cees Hek <ceeshek@gmail.com>
 
 This library is free software. You can modify and or distribute it under the same terms as Perl itself.
 

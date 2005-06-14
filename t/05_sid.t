@@ -1,4 +1,5 @@
 use Test::More tests => 10;
+use File::Spec;
 BEGIN { use_ok('CGI::Application::Plugin::Session') };
 
 use lib './t';
@@ -34,7 +35,7 @@ like($t2_output, qr/value=test1/, 'session parameter retrieved');
 unlike($t2_output, qr/Set-Cookie: CGISESSID=[a-zA-Z0-9]+/, 'session cookie not set');
 
 undef $t2_obj;
-unlink 't/cgisess_'.$id1;
+unlink File::Spec->catdir('t', 'cgisess_'.$id1);
 
 # test with an expired cookie
 $ENV{HTTP_COOKIE} = CGI::Session->name.'=badsessionid';
@@ -50,4 +51,4 @@ like($t3_output, qr/Set-Cookie: CGISESSID=[a-zA-Z0-9]+/, 'session cookie set');
 
 my ($id3) = $t3_output =~ /id=([a-zA-Z0-9]+)/s;
 undef $t3_obj;
-unlink 't/cgisess_'.$id3;
+unlink File::Spec->catdir('t', 'cgisess_'.$id3);

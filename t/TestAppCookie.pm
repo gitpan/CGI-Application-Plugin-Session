@@ -9,14 +9,17 @@ use CGI::Application::Plugin::Session;
 sub cgiapp_init {
   my $self = shift;
 
-  $self->session_config(
+  $self->session_config({
                         CGI_SESSION_OPTIONS => [ "driver:File", $self->query, {Directory=>'t/'} ],
+                        SEND_COOKIE         => 0,
                         COOKIE_PARAMS       => {
+                                                 -name    => CGI::Session->name,
+                                                 -value   => '1111',
                                                  -path    => '/testpath',
                                                  -domain  => 'mydomain.com',
                                                  -expires => '+24h',
                                                },
-  );
+  });
 }
 
 sub setup {
@@ -31,6 +34,7 @@ sub test_mode {
 	my $self = shift;
   my $output = '';
 
+  $self->session_cookie;
   my $session = $self->session;
 
   $output .= $session->is_new ? "session created\n" : "session found\n";

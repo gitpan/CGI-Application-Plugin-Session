@@ -1,5 +1,22 @@
 Revision history for Perl extension CGI::Application::Plugin::Session.
 
+0.07  Sat Jun 11 13:24:38 EDT 2005
+
+    - New config option DEFAULT_EXPIRY which will automatically call
+      the CGI::Session 'expire' method for all newly created sessions
+    - The cookie now sets the Expires header based on the expiry
+      time of the CGI::Session object (patch by Mark Stosberg)
+    - Changed the hash key where we store all the private info in
+      the CGI::Application object to be a bit more unique to this
+      plugin module
+    - expanded the coverage of the test suite
+  Bugs:
+    - If you didn't import the session_cookie method into your
+      namespace, calls to $self->session would fail.
+    - If you called session_cookie manually, it was possible under
+      specific conditions that the session wasn't created yet,
+      and the cookie would not be created properly
+
 0.06  Tue Oct 19 22:15:48 EST 2004
 
     - CGI::Session will currently only work with CGI.pm so check to see
