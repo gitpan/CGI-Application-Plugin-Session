@@ -1,5 +1,12 @@
 Revision history for Perl extension CGI::Application::Plugin::Session.
 
+0.08  Wed Jul  6 12:06:04 EDT 2005
+
+    - Simplify the pod tests according to Test::Pod docs
+    - Allow -expires attribute for the cookie header to be blank
+      so that an expiry date is not put on the session automatically
+      (Curtis Hawthorne)
+
 0.07  Sat Jun 11 13:24:38 EDT 2005
 
     - New config option DEFAULT_EXPIRY which will automatically call

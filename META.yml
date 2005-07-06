@@ -1,8 +1,8 @@
 ---
 name: CGI-Application-Plugin-Session
-version: 0.07
+version: 0.08
 author:
-  - Cees Hek <cees@crtconsulting.ca>
+  - Cees Hek <ceeshek@gmail.com>
 abstract: Plugin that adds session support to CGI::Application
 license: perl
 requires:
@@ -12,5 +12,5 @@ requires:
 provides:
   CGI::Application::Plugin::Session:
     file: lib/CGI/Application/Plugin/Session.pm
-    version: 0.07
+    version: 0.08
 generated_by: Module::Build version 0.26

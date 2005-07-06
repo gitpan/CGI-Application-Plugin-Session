@@ -14,6 +14,7 @@ t/06_expiry.t
 t/07_defaults.t
 t/08_notcgipm.t
 t/09_options.t
+t/10_sessioncookie.t
 t/99_pod.t
 t/TestAppBasic.pm
 t/TestAppCGISimple.pm
@@ -22,4 +23,5 @@ t/TestAppDefaults.pm
 t/TestAppExpiry.pm
 t/TestAppNoCookie.pm
 t/TestAppOptions.pm
+t/TestAppSessionCookie.pm
 t/TestAppSid.pm

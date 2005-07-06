@@ -16,7 +16,7 @@ require Exporter;
 );
 sub import { goto &Exporter::import }
 
-$VERSION = '0.07';
+$VERSION = '0.08';
 
 sub session {
     my $self = shift;
@@ -121,7 +121,9 @@ sub session_cookie {
 
     $options{'-name'}    ||= CGI::Session->name;
     $options{'-value'}   ||= $self->session->id;
-    $options{'-expires'} ||= _build_exp_time( $self->session->expires() ) if defined $self->session->expires();
+    if(defined($self->session->expires()) && !defined($options{'-expires'})) {
+        $options{'-expires'} = _build_exp_time( $self->session->expires() );
+    }
     my $cookie = $self->query->cookie(%options);
     $self->header_add(-cookie => [$cookie]);
 }
