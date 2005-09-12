@@ -139,6 +139,17 @@ METHODS
       # custom cookie parameters
       $self->session_cookie(-secure => 1, -expires => '+1w');
 
+  session_delete
+    This method will perform a more comprehensive clean-up of the session,
+    calling both the CGI::Session delete() method, but also deleting the
+    cookie from the client, if you are using cookies.
+
+      sub logout {
+        my $self = shift;
+        $self->session_delete;
+        # what now?  redirect user back to the homepage?
+      }
+
 EXAMPLE
     In a CGI::Application module:
 

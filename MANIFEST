@@ -15,7 +15,8 @@ t/07_defaults.t
 t/08_notcgipm.t
 t/09_options.t
 t/10_sessioncookie.t
-t/99_pod.t
+t/98_pod.t
+t/99_pod_coverage.t
 t/TestAppBasic.pm
 t/TestAppCGISimple.pm
 t/TestAppCookie.pm

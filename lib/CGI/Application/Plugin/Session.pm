@@ -13,10 +13,11 @@ require Exporter;
   session
   session_config
   session_cookie
+  session_delete
 );
 sub import { goto &Exporter::import }
 
-$VERSION = '0.08';
+$VERSION = '0.09';
 
 sub session {
     my $self = shift;
@@ -137,6 +138,25 @@ sub _build_exp_time {
 
     # Add an 's' for "seconds".
     return $prefix.$secs_until_expiry.'s';
+}
+
+sub session_delete {
+    my $self = shift;
+
+    if ( my $session = $self->{__CAP__SESSION_OBJ} ) {
+        $session->delete;
+        if ( $self->{'__CAP__SESSION_CONFIG'}->{'SEND_COOKIE'} ) {
+            my %options;
+            if ( $self->{'__CAP__SESSION_CONFIG'}->{'COOKIE_PARAMS'} ) {
+                %options = (%{ $self->{'__CAP__SESSION_CONFIG'}->{'COOKIE_PARAMS'} }, %options);
+            }
+            $options{'name'}        ||= CGI::Session->name;
+            $options{'value'}       = '';
+            $options{'-expires'}    = '-1d';
+            my $cookie = $self->query->cookie( %options );
+            $self->header_add( -cookie => [$cookie] );
+        }
+    }
 }
 
 1;
@@ -287,6 +307,19 @@ false.
   # Force the cookie header to be sent including some
   # custom cookie parameters
   $self->session_cookie(-secure => 1, -expires => '+1w');
+
+
+=head2 session_delete
+
+This method will perform a more comprehensive clean-up of the session, calling both
+the CGI::Session delete() method, but also deleting the cookie from the client, if
+you are using cookies.
+
+  sub logout {
+    my $self = shift;
+    $self->session_delete;
+    # what now?  redirect user back to the homepage?
+  }
 
 
 =head1 EXAMPLE

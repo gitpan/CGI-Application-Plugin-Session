@@ -1,5 +1,10 @@
 Revision history for Perl extension CGI::Application::Plugin::Session.
 
+0.09 Sun Sep 11 21:22:06 EDT 2005
+
+    - Added session_delete() method to send expired cookie to client
+      (Jason Purdy)
+
 0.08  Wed Jul  6 12:06:04 EDT 2005
 
     - Simplify the pod tests according to Test::Pod docs
