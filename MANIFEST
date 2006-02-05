@@ -15,6 +15,8 @@ t/07_defaults.t
 t/08_notcgipm.t
 t/09_options.t
 t/10_sessioncookie.t
+t/11_sessiondelete.t
+t/12_badconfig.t
 t/98_pod.t
 t/99_pod_coverage.t
 t/TestAppBasic.pm
@@ -23,6 +25,6 @@ t/TestAppCookie.pm
 t/TestAppDefaults.pm
 t/TestAppExpiry.pm
 t/TestAppNoCookie.pm
-t/TestAppOptions.pm
 t/TestAppSessionCookie.pm
+t/TestAppSessionDelete.pm
 t/TestAppSid.pm

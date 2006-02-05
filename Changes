@@ -1,5 +1,11 @@
 Revision history for Perl extension CGI::Application::Plugin::Session.
 
+1.00 
+
+  Bug fixes:
+    - Test return value from CGI::Session to make sure the session
+      object was created properly. (perlmonkey -at- gmail.com)
+
 0.09 Sun Sep 11 21:22:06 EDT 2005
 
     - Added session_delete() method to send expired cookie to client
@@ -22,7 +28,7 @@ Revision history for Perl extension CGI::Application::Plugin::Session.
       the CGI::Application object to be a bit more unique to this
       plugin module
     - expanded the coverage of the test suite
-  Bugs:
+  Bug fixes:
     - If you didn't import the session_cookie method into your
       namespace, calls to $self->session would fail.
     - If you called session_cookie manually, it was possible under
@@ -71,7 +77,7 @@ Revision history for Perl extension CGI::Application::Plugin::Session.
 
   - altered doc example by moving authentication check
     to cgiapp_prerun to co-inside with the examples in the
-    CGI::Application docs - "Clayton L. Scott" <tex@engsoc.org>
+    CGI::Application docs - "Clayton L. Scott" tex -at- engsoc.org
 
   - automatically add a cookie to the outgoing headers if there
     isn't one there already (requires CGI::Application 3.21)

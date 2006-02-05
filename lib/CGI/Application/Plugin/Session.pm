@@ -3,6 +3,7 @@ package CGI::Application::Plugin::Session;
 use CGI::Session ();
 use File::Spec ();
 use CGI::Application 3.21;
+use Carp qw(croak);
 
 use strict;
 use vars qw($VERSION @EXPORT);
@@ -17,7 +18,7 @@ require Exporter;
 );
 sub import { goto &Exporter::import }
 
-$VERSION = '0.09';
+$VERSION = '1.00';
 
 sub session {
     my $self = shift;
@@ -40,8 +41,12 @@ sub session {
             $params[1] = $sid;
         }
 
-        # create CGI::Session object
+        # create CGI::Session object or die with an error
         $self->{__CAP__SESSION_OBJ} = CGI::Session->new(@params);
+        if (! $self->{__CAP__SESSION_OBJ} ) {
+            my $errstr = CGI::Session->errstr || 'Unknown';
+            croak "Failed to Create CGI::Session object :: Reason: $errstr";
+        }
 
         # Set the default expiry if requested and if this is a new session
         if ($self->{__CAP__SESSION_CONFIG}->{DEFAULT_EXPIRY} && $self->{__CAP__SESSION_OBJ}->is_new) {
