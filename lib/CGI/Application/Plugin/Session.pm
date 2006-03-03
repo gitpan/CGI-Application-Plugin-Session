@@ -4,6 +4,7 @@ use CGI::Session ();
 use File::Spec ();
 use CGI::Application 3.21;
 use Carp qw(croak);
+use Scalar::Util ();
 
 use strict;
 use vars qw($VERSION @EXPORT);
@@ -18,7 +19,7 @@ require Exporter;
 );
 sub import { goto &Exporter::import }
 
-$VERSION = '1.00';
+$VERSION = '1.01';
 
 sub session {
     my $self = shift;
@@ -36,7 +37,7 @@ sub session {
 
         # CGI::Session only works properly with CGI.pm so extract the sid manually if
         # another module is being used
-        if (ref $params[1] && ref $params[1] ne 'CGI') {
+        if (Scalar::Util::blessed($params[1]) && ! $params[1]->isa('CGI')) {
             my $sid = $params[1]->cookie(CGI::Session->name) || $params[1]->param(CGI::Session->name);
             $params[1] = $sid;
         }
@@ -259,9 +260,13 @@ CGI::Session of the change by calling CGI::Session->name('new_cookie_name').
 
 =item SEND_COOKIE
 
-If set to a true value, the module will automatically add a cookie header to the outgoing headers.
-This option defaults to true.  If it is set to false, then no session cookies will be sent,
-which may be useful if you prefer URL based sessions (it is up to you to pass the session ID in this case).
+If set to a true value, the module will automatically add a cookie header to
+the outgoing headers if a new session is created (Since the session module is
+lazy loaded, this will only happen if you make a call to $self->session at some
+point to create the session object).  This option defaults to true.  If it is
+set to false, then no session cookies will be sent, which may be useful if you
+prefer URL based sessions (it is up to you to pass the session ID in this
+case).
 
 =back
 

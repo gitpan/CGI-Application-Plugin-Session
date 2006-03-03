@@ -7,6 +7,7 @@ Module::Build->new(
         'CGI::Application' => 3.21,
         'CGI::Session'     => 3.95,
         'File::Spec'       => 0,
+        'Scalar::Util'     => 0,
     },
     build_requires => {
         'Test::More' => 0,

@@ -1,5 +1,12 @@
 Revision history for Perl extension CGI::Application::Plugin::Session.
 
+1.01
+
+    - Fix bug when using CGI::Fast (reported by Yuji Maeda)
+    - Clarify the SEND_COOKIE docs to mention that a cookie is only
+      set if the session object is created during the request
+      (Mark Stosberg)
+
 1.00 
 
   Bug fixes:

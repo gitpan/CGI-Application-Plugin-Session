@@ -8,6 +8,7 @@ WriteMakefile
           'VERSION_FROM' => 'lib/CGI/Application/Plugin/Session.pm',
           'PREREQ_PM' => {
                            'Test::More' => 0,
+                           'Scalar::Util' => 0,
                            'CGI::Application' => '3.21',
                            'CGI::Session' => '3.95',
                            'File::Spec' => 0
