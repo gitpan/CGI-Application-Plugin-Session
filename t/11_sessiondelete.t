@@ -1,4 +1,4 @@
-use Test::More tests => 10;
+use Test::More tests => 20;
 use File::Spec;
 BEGIN { use_ok('CGI::Application::Plugin::Session') };
 
@@ -28,8 +28,7 @@ my ( $original_expiry ) = $t1_output =~ /expires=(.+)\s+Date/;
 
 # need to inject session into $query - this is done by an environment var
 $ENV{HTTP_COOKIE} = "CGISESSID=$id1";
-my $query = new CGI;
-$query->param( -name => 'rm', -value => 'logout' );
+my $query = new CGI({ rm => 'logout' });
 $t1_obj = TestAppSessionDelete->new( QUERY => $query );
 $t1_output = $t1_obj->run();
 
@@ -37,8 +36,11 @@ $t1_output = $t1_obj->run();
 ok( $t1_output =~ /logout finished/, 'vanilla output came through ok' );
 # If that didn't pass, then I'm guessing the session wasn't injected properly
 
-# Was a cookie in the output?
-like($t1_output, qr/Set-Cookie: CGISESSID=[a-zA-Z0-9]+/, 'cookie in output');
+# Was the session create cookie in the output?  It shouldn't be
+unlike($t1_output, qr/Set-Cookie: CGISESSID=[a-zA-Z0-9]+/, 'new session cookie not in output');
+
+# Was the session delete cookie in the output?  It should be
+like($t1_output, qr/Set-Cookie: CGISESSID=;/, 'delete session cookie in output');
 
 my ( $new_expiry ) = $t1_output =~ /expires=(.+)\s+Date/;
 
@@ -63,4 +65,56 @@ SKIP: {
 undef $t1_obj;
 # Is the file gone?
 ok( !-e 't/cgisess_'.$id1, 'session_delete wiped the flat file ok' );
+
+
+# We do the cookie tests again, this time we set some extra custom cookies
+# and make sure they don't get clobbered
+$ENV{HTTP_COOKIE} = "CGISESSID=$id1";
+$query = new CGI({ rm => 'logout' });
+$t1_obj = TestAppSessionDelete->new( QUERY => $query );
+$t1_obj->header_add( -cookie => [ CGI::Cookie->new( -name => 'test', -value => 'testing' ) ]);
+$t1_obj->header_add( -cookie => [ 'test2=testing2; path=/' ]);
+
+$t1_output = $t1_obj->run();
+
+# vanilla output came through ok?
+ok( $t1_output =~ /logout finished/, 'vanilla output came through ok' );
+# If that didn't pass, then I'm guessing the session wasn't injected properly
+
+# Was the session create cookie in the output?  It shouldn't be
+unlike($t1_output, qr/Set-Cookie: CGISESSID=[a-zA-Z0-9]+/, 'new session cookie not in output');
+
+# Was the session delete cookie in the output?  It should be
+like($t1_output, qr/Set-Cookie: CGISESSID=;/, 'delete session cookie in output');
+
+# Was the test cookie in the output?  It should be
+like($t1_output, qr/Set-Cookie: test=testing/, 'test cookie in output');
+
+# Was the test cookie in the output?  It should be
+like($t1_output, qr/Set-Cookie: test2=testing2/, 'second test cookie in output');
+
+
+# We do the cookie tests one last time, this time we clobber the session cookie
+# and set a single new cookie
+$ENV{HTTP_COOKIE} = "CGISESSID=$id1";
+$query = new CGI({ rm => 'logout' });
+$t1_obj = TestAppSessionDelete->new( QUERY => $query );
+$t1_obj->session; # this sets the session cookie
+$t1_obj->header_add( -cookie => 'test2=testing2; path=/');  # this clobbers the session cookie
+
+$t1_output = $t1_obj->run();
+
+# vanilla output came through ok?
+ok( $t1_output =~ /logout finished/, 'vanilla output came through ok' );
+# If that didn't pass, then I'm guessing the session wasn't injected properly
+
+# Was the session create cookie in the output?  It shouldn't be
+unlike($t1_output, qr/Set-Cookie: CGISESSID=[a-zA-Z0-9]+/, 'new session cookie not in output');
+
+# Was the session delete cookie in the output?  It should be
+like($t1_output, qr/Set-Cookie: CGISESSID=;/, 'delete session cookie in output');
+
+
+# Was the test cookie in the output?  It should be
+like($t1_output, qr/Set-Cookie: test2=testing2/, 'test cookie in output');
 

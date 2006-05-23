@@ -19,7 +19,7 @@ require Exporter;
 );
 sub import { goto &Exporter::import }
 
-$VERSION = '1.01';
+$VERSION = '1.02';
 
 sub session {
     my $self = shift;
@@ -149,18 +149,41 @@ sub _build_exp_time {
 sub session_delete {
     my $self = shift;
 
-    if ( my $session = $self->{__CAP__SESSION_OBJ} ) {
+    if ( my $session = $self->session ) {
         $session->delete;
         if ( $self->{'__CAP__SESSION_CONFIG'}->{'SEND_COOKIE'} ) {
             my %options;
             if ( $self->{'__CAP__SESSION_CONFIG'}->{'COOKIE_PARAMS'} ) {
-                %options = (%{ $self->{'__CAP__SESSION_CONFIG'}->{'COOKIE_PARAMS'} }, %options);
+                %options = ( %{ $self->{'__CAP__SESSION_CONFIG'}->{'COOKIE_PARAMS'} }, %options );
             }
-            $options{'name'}        ||= CGI::Session->name;
-            $options{'value'}       = '';
-            $options{'-expires'}    = '-1d';
-            my $cookie = $self->query->cookie( %options );
-            $self->header_add( -cookie => [$cookie] );
+            $options{'name'} ||= CGI::Session->name;
+            $options{'value'}    = '';
+            $options{'-expires'} = '-1d';
+            my $newcookie = $self->query->cookie(%options);
+
+            # See if a session cookie has already been set (this will happen if
+            #  this is a new session).  We keep all existing cookies except the
+            #  session cookie, which we replace with the timed out session
+            #  cookie
+            my @keep;
+            my %headers = $self->header_props;
+            my $cookies = $headers{'-cookie'} || [];
+            $cookies = [$cookies] unless ref $cookies eq 'ARRAY';
+            foreach my $cookie (@$cookies) {
+                if ( ref($cookie) ne 'CGI::Cookie' || $cookie->name ne CGI::Session->name ) {
+                    # keep this cookie
+                    push @keep, $cookie;
+                }
+            }
+            push @keep, $newcookie;
+
+            # We have to set the cookies this way, because CGI::Application has
+            #  an annoying interface to the headers (why can't we have
+            #  'header_set as well as header_add?).  The first call replaces all
+            #  cookie headers with the one new cookie header, and the next call
+            #  adds in the rest of the cookies if there are any.
+            $self->header_add( -cookie => shift @keep );
+            $self->header_add( -cookie => \@keep ) if @keep;
         }
     }
 }

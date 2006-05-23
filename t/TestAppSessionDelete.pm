@@ -47,7 +47,6 @@ sub logout {
   if ( ! $query->cookie( 'CGISESSID' ) ) {
       return "didn't get session passed in!";
   } else {
-      my $session = $self->session;
       $self->session_delete;
       return "logout finished";
   }

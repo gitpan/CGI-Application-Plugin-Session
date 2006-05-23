@@ -1,19 +1,28 @@
 Revision history for Perl extension CGI::Application::Plugin::Session.
 
-1.01
+1.02
+
+    - When calling session_delete, make sure that the session is
+      created first, in case the user hasn't called $self->session
+      (Yuji Maeda)
+    - When session_delete is called, make sure that we remove any
+      session cookies that may be in the outgoing headers before
+      adding in the session timeout cookie.
+
+1.01  Fri Mar  3 21:03:45 EDT 2006
 
     - Fix bug when using CGI::Fast (reported by Yuji Maeda)
     - Clarify the SEND_COOKIE docs to mention that a cookie is only
       set if the session object is created during the request
       (Mark Stosberg)
 
-1.00 
+1.00  Sun Feb  5 16:44:33 EDT 2006
 
   Bug fixes:
     - Test return value from CGI::Session to make sure the session
       object was created properly. (perlmonkey -at- gmail.com)
 
-0.09 Sun Sep 11 21:22:06 EDT 2005
+0.09  Sun Sep 11 21:22:06 EDT 2005
 
     - Added session_delete() method to send expired cookie to client
       (Jason Purdy)
