@@ -16,10 +16,12 @@ require Exporter;
   session_config
   session_cookie
   session_delete
+  session_loaded
+  session_recreate
 );
 sub import { goto &Exporter::import }
 
-$VERSION = '1.02';
+$VERSION = '1.03';
 
 sub session {
     my $self = shift;
@@ -132,7 +134,30 @@ sub session_cookie {
         $options{'-expires'} = _build_exp_time( $self->session->expires() );
     }
     my $cookie = $self->query->cookie(%options);
-    $self->header_add(-cookie => [$cookie]);
+
+    # Look for a cookie header in the existing headers
+    my %headers = $self->header_props;
+    my $cookie_set = 0;
+    if (my $cookies = $headers{'-cookie'}) {
+        if (ref($cookies) eq 'ARRAY') {
+            # multiple cookie headers so check them all
+            for (my $i=0; $i < @$cookies; $i++) {
+                # replace the cookie inline if we find a match
+                if (substr($cookies->[$i], 0, length($options{'-name'})) eq $options{'-name'}) {
+                    $cookies->[$i] = $cookie;
+                    $cookie_set++;
+                }
+            }
+        } elsif (substr($cookies, 0, length($options{'-name'})) eq $options{'-name'}) {
+            # only one cookie and it is ours, so overwrite it
+            $self->header_add(-cookie => $cookie);
+            $cookie_set++;
+        }
+    }
+
+    $self->header_add(-cookie => [$cookie]) unless $cookie_set;
+
+    return 1;
 }
 
 sub _build_exp_time {
@@ -186,6 +211,34 @@ sub session_delete {
             $self->header_add( -cookie => \@keep ) if @keep;
         }
     }
+}
+
+sub session_loaded {
+    my $self = shift;
+    return defined $self->{__CAP__SESSION_OBJ};
+}
+
+sub session_recreate {
+    my $self = shift;
+    my $data = {};
+    
+    # Copy all values from existing session and delete it
+    if (session_loaded($self)) {
+        $data = $self->session->param_hashref;
+        $self->session->delete;
+        $self->{__CAP__SESSION_OBJ} = undef;
+
+    }
+
+    # create a new session and populate it
+    #  (This should also send out a new cookie if so configured)
+    my $session = $self->session;
+    while(my($k,$v) = each %$data) {
+        next if index($k, '_SESSION_') == 0;
+        $session->param($k => $v);
+    }
+
+    return 1;
 }
 
 1;
@@ -340,6 +393,38 @@ false.
   # Force the cookie header to be sent including some
   # custom cookie parameters
   $self->session_cookie(-secure => 1, -expires => '+1w');
+
+
+=head2 session_loaded
+
+This method will let you know if the session object has been loaded yet.  In
+other words, it lets you know if $self->session has been called.
+
+  sub cgiapp_postrun {
+    my $self = shift;
+    $self->session->flush if $self->session_loaded;;
+  }
+
+=head2 session_recreate
+
+This method will delete the existing session, and create a brand new one for
+you with a new session ID.  It copies over all existing parameters into the new
+session.
+
+This can be useful to protect against some login attacks when storing
+authentication tokens in the session.  Very briefly, an attacker loads a page
+on your site and creates a session, then tries to trick a victim into loading
+this page with the same session ID (possibly by embedding it in a URL).  Then
+if the victim follows the link and subsequently logs into their account, the
+attacker will have a valid session ID where the session is now logged in, and
+hence the attacker has access to the victims account.
+
+  sub mylogin {
+    my $self = shift;
+    if ($newly_authenticated) {
+        $self->session_recreate;
+    }
+  }
 
 
 =head2 session_delete

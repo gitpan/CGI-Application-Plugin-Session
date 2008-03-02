@@ -1,6 +1,11 @@
 Revision history for Perl extension CGI::Application::Plugin::Session.
 
-1.02
+1.03
+
+    - Add session_recreate method (suggested by Robert Bauck Hamar)
+    - Add session_loaded method (Sven Neuhaus)
+
+1.02  Tue May 23 12:03:19 EDT 2006
 
     - When calling session_delete, make sure that the session is
       created first, in case the user hasn't called $self->session

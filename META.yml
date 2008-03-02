@@ -1,6 +1,6 @@
 ---
 name: CGI-Application-Plugin-Session
-version: 1.02
+version: 1.03
 author:
   - 'Cees Hek <ceeshek@gmail.com>'
 abstract: Plugin that adds session support to CGI::Application
@@ -17,5 +17,5 @@ build_requires:
 provides:
   CGI::Application::Plugin::Session:
     file: lib/CGI/Application/Plugin/Session.pm
-    version: 1.02
-generated_by: Module::Build version 0.2612
+    version: 1.03
+generated_by: Module::Build version 0.26
