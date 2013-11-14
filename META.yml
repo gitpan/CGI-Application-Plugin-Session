@@ -1,21 +1,24 @@
 ---
-name: CGI-Application-Plugin-Session
-version: 1.03
+abstract: 'Plugin that adds session support to CGI::Application'
 author:
   - 'Cees Hek <ceeshek@gmail.com>'
-abstract: Plugin that adds session support to CGI::Application
+build_requires:
+  Test::More: 1.001002
+configure_requires:
+  ExtUtils::MakeMaker: 6.30
+dynamic_config: 0
+generated_by: 'Dist::Zilla version 4.300039, CPAN::Meta::Converter version 2.132830'
 license: perl
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.4.html
+  version: 1.4
+name: CGI-Application-Plugin-Session
 requires:
   CGI::Application: 3.21
-  CGI::Session: 3.95
+  CGI::Session: 4.48
   File::Spec: 0
   Scalar::Util: 0
-recommends:
-  Test::Exception: 0
-build_requires:
-  Test::More: 0
-provides:
-  CGI::Application::Plugin::Session:
-    file: lib/CGI/Application/Plugin/Session.pm
-    version: 1.03
-generated_by: Module::Build version 0.26
+resources:
+  homepage: https://github.com/frioux/CGI-Application-Plugin-Session
+  repository: https://github.com/frioux/CGI-Application-Plugin-Session.git
+version: 1.04

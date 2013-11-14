@@ -1,10 +1,13 @@
-Build.PL
 Changes
-lib/CGI/Application/Plugin/Session.pm
-Makefile.PL
+LICENSE
 MANIFEST
+META.json
 META.yml
+Makefile.PL
 README
+cpanfile
+dist.ini
+lib/CGI/Application/Plugin/Session.pm
 t/01_basic.t
 t/02_cookie.t
 t/03_nocookie.t
@@ -17,8 +20,7 @@ t/09_options.t
 t/10_sessioncookie.t
 t/11_sessiondelete.t
 t/12_badconfig.t
-t/98_pod.t
-t/99_pod_coverage.t
+t/13_sessioncookiename.t
 t/TestAppBasic.pm
 t/TestAppCGISimple.pm
 t/TestAppCookie.pm
@@ -26,5 +28,8 @@ t/TestAppDefaults.pm
 t/TestAppExpiry.pm
 t/TestAppNoCookie.pm
 t/TestAppSessionCookie.pm
+t/TestAppSessionCookieName.pm
 t/TestAppSessionDelete.pm
 t/TestAppSid.pm
+t/release-pod-coverage.t
+t/release-pod-syntax.t

@@ -1,10 +1,15 @@
 package CGI::Application::Plugin::Session;
+{
+  $CGI::Application::Plugin::Session::VERSION = '1.04';
+}
 
 use CGI::Session ();
 use File::Spec ();
 use CGI::Application 3.21;
 use Carp qw(croak);
 use Scalar::Util ();
+
+# ABSTRACT: Plugin that adds session support to CGI::Application
 
 use strict;
 use vars qw($VERSION @EXPORT);
@@ -20,8 +25,6 @@ require Exporter;
   session_recreate
 );
 sub import { goto &Exporter::import }
-
-$VERSION = '1.03';
 
 sub session {
     my $self = shift;
@@ -40,7 +43,8 @@ sub session {
         # CGI::Session only works properly with CGI.pm so extract the sid manually if
         # another module is being used
         if (Scalar::Util::blessed($params[1]) && ! $params[1]->isa('CGI')) {
-            my $sid = $params[1]->cookie(CGI::Session->name) || $params[1]->param(CGI::Session->name);
+            my $name = __locate_session_name( $self ); ## plugin method call
++           my $sid  = $params[1]->cookie($name) || $params[1]->param($name);
             $params[1] = $sid;
         }
 
@@ -62,7 +66,9 @@ sub session {
         #  or if the session has an expiry set on it
         #  but don't send it if SEND_COOKIE is set to 0
         if (!defined $self->{__CAP__SESSION_CONFIG}->{SEND_COOKIE} || $self->{__CAP__SESSION_CONFIG}->{SEND_COOKIE}) {
-            my $cid = $self->query->cookie(CGI::Session->name);
+            my $cid = $self->query->cookie(
+                $self->{__CAP__SESSION_OBJ}->name
+            );
             if (!$cid || $cid ne $self->{__CAP__SESSION_OBJ}->id || $self->{__CAP__SESSION_OBJ}->expire()) {
                 session_cookie($self);
             }
@@ -79,7 +85,6 @@ sub session_config {
       die "Calling session_config after the session has already been created" if (defined $self->{__CAP__SESSION_OBJ});
       my $props;
       if (ref($_[0]) eq 'HASH') {
-          my $rthash = %{$_[0]};
           $props = $self->_cap_hash($_[0]);
       } else {
           $props = $self->_cap_hash({ @_ });
@@ -122,13 +127,22 @@ sub session_cookie {
     if ($self->{__CAP__SESSION_CONFIG}->{COOKIE_PARAMS}) {
       %options = (%{ $self->{__CAP__SESSION_CONFIG}->{COOKIE_PARAMS} }, %options);
     }
-    
+
     if (!$self->{__CAP__SESSION_OBJ}) {
         # The session object has not been created yet, so make sure we at least call it once
         my $tmp = $self->session;
     }
 
-    $options{'-name'}    ||= CGI::Session->name;
+    ## check cookie option -name with session name
+    ## if different these may cause problems/confusion
+    if ( exists $options{'-name'} and
+        $options{'-name'} ne $self->session->name ) {
+        warn sprintf( "Cookie '%s' and Session '%s' name don't match.\n",
+            $options{'-name'}, $self->session->name )
+    }
+
+    ## setup the values for cookie
+    $options{'-name'}    ||= $self->session->name;
     $options{'-value'}   ||= $self->session->id;
     if(defined($self->session->expires()) && !defined($options{'-expires'})) {
         $options{'-expires'} = _build_exp_time( $self->session->expires() );
@@ -181,10 +195,10 @@ sub session_delete {
             if ( $self->{'__CAP__SESSION_CONFIG'}->{'COOKIE_PARAMS'} ) {
                 %options = ( %{ $self->{'__CAP__SESSION_CONFIG'}->{'COOKIE_PARAMS'} }, %options );
             }
-            $options{'name'} ||= CGI::Session->name;
+            $options{'name'} ||= $session->name;
             $options{'value'}    = '';
             $options{'-expires'} = '-1d';
-            my $newcookie = $self->query->cookie(%options);
+            my $newcookie = $self->query->cookie(\%options);
 
             # See if a session cookie has already been set (this will happen if
             #  this is a new session).  We keep all existing cookies except the
@@ -195,7 +209,7 @@ sub session_delete {
             my $cookies = $headers{'-cookie'} || [];
             $cookies = [$cookies] unless ref $cookies eq 'ARRAY';
             foreach my $cookie (@$cookies) {
-                if ( ref($cookie) ne 'CGI::Cookie' || $cookie->name ne CGI::Session->name ) {
+                if ( ref($cookie) ne 'CGI::Cookie' || $cookie->name ne $session->name ) {
                     # keep this cookie
                     push @keep, $cookie;
                 }
@@ -221,7 +235,7 @@ sub session_loaded {
 sub session_recreate {
     my $self = shift;
     my $data = {};
-    
+
     # Copy all values from existing session and delete it
     if (session_loaded($self)) {
         $data = $self->session->param_hashref;
@@ -241,13 +255,35 @@ sub session_recreate {
     return 1;
 }
 
+## all a hack to adjust for problems with cgi::session and
+## it not playing with non-CGI.pm objects
+sub __locate_session_name {
+    my $self = shift;
+    my $sess_opts = $self->{__CAP__SESSION_CONFIG}->{CGI_SESSION_OPTIONS};
+
+    ## search for 'name' cgi session option
+    if ( $sess_opts and $sess_opts->[4]
+         and ref $sess_opts->[4] eq 'HASH'
+         and exists $sess_opts->[4]->{name} ) {
+        return $sess_opts->[4]->{name};
+    }
+
+    return CGI::Session->name;
+}
+
 1;
+
 __END__
+
+=pod
 
 =head1 NAME
 
-CGI::Application::Plugin::Session - Add CGI::Session support to CGI::Application
+CGI::Application::Plugin::Session - Plugin that adds session support to CGI::Application
 
+=head1 VERSION
+
+version 1.04
 
 =head1 SYNOPSIS
 
@@ -269,7 +305,11 @@ by always returning the same Session object for the duration of the request.
 This module aims to be as simple and non obtrusive as possible.  By not requiring
 any changes to the inheritance tree of your modules, it can be easily added to
 existing applications.  Think of it as a plugin module that adds a couple of
-new methods directly into the CGI::Application namespace simply by loading the module.  
+new methods directly into the CGI::Application namespace simply by loading the module.
+
+=head1 NAME
+
+CGI::Application::Plugin::Session - Add CGI::Session support to CGI::Application
 
 =head1 METHODS
 
@@ -284,12 +324,11 @@ create the session object.
 
   # retrieve the session object
   my $session = $self->session;
- 
+
   - or -
- 
+
   # use the session object directly
   my $language = $self->session->param('language');
-
 
 =head2 session_config
 
@@ -331,8 +370,19 @@ The -name and -value parameters for the cookie will be added automatically unles
 you specifically override them by providing -name and/or -value parameters.
 See the L<CGI::Cookie> docs for the exact syntax of the parameters.
 
-NOTE:  If you change the name of the cookie by passing a -name parameter, remember to notify
-CGI::Session of the change by calling CGI::Session->name('new_cookie_name').
+NOTE: You can do the following to get both the cookie name and the internal name of the CGI::Session object to be changed:
+
+  $self->session_config(
+    CGI_SESSION_OPTIONS => [
+      $driver,
+      $self->query,
+      \%driver_options,
+      { name => 'new_cookie_name' } # change cookie and session name
+    ]
+  );
+
+Also, if '-name' parameter and 'name' of session don't match a warning will
+be emitted.
 
 =item SEND_COOKIE
 
@@ -369,7 +419,6 @@ expiry and domain on the cookie.
                                    -secure  => 1,
                                  },
  );
- 
 
 =head2 session_cookie
 
@@ -393,7 +442,6 @@ false.
   # Force the cookie header to be sent including some
   # custom cookie parameters
   $self->session_cookie(-secure => 1, -expires => '+1w');
-
 
 =head2 session_loaded
 
@@ -426,7 +474,6 @@ hence the attacker has access to the victims account.
     }
   }
 
-
 =head2 session_delete
 
 This method will perform a more comprehensive clean-up of the session, calling both
@@ -439,16 +486,14 @@ you are using cookies.
     # what now?  redirect user back to the homepage?
   }
 
-
 =head1 EXAMPLE
 
 In a CGI::Application module:
 
-  
   # configure the session once during the init stage
   sub cgiapp_init {
     my $self = shift;
- 
+
     # Configure the session
     $self->session_config(
        CGI_SESSION_OPTIONS => [ "driver:PostgreSQL;serializer:Storable", $self->query, {Handle=>$self->dbh} ],
@@ -459,31 +504,30 @@ In a CGI::Application module:
                               },
        SEND_COOKIE         => 1,
     );
- 
+
   }
- 
+
   sub cgiapp_prerun {
     my $self = shift;
- 
+
     # Redirect to login, if necessary
     unless ( $self->session->param('~logged-in') ) {
       $self->prerun_mode('login');
     }
   }
- 
+
   sub my_runmode {
     my $self = shift;
- 
+
     # Load the template
     my $template = $self->load_tmpl('my_runmode.tmpl');
- 
+
     # Add all the session parameters to the template
     $template->param($self->session->param_hashref());
- 
+
     # return the template output
     return $template->output;
   }
-
 
 =head1 TODO
 
@@ -504,16 +548,13 @@ Allow a callback to be executed right after a session has been created
 
 =back
 
-
 =head1 SEE ALSO
 
 L<CGI::Application>, L<CGI::Session>, perl(1)
 
-
 =head1 AUTHOR
 
 Cees Hek <ceeshek@gmail.com>
-
 
 =head1 LICENSE
 
@@ -521,5 +562,15 @@ Copyright (C) 2004, 2005 Cees Hek <ceeshek@gmail.com>
 
 This library is free software. You can modify and or distribute it under the same terms as Perl itself.
 
-=cut
+=head1 AUTHOR
 
+Cees Hek <ceeshek@gmail.com>
+
+=head1 COPYRIGHT AND LICENSE
+
+This software is copyright (c) 2013 by Cees Hek.
+
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
+
+=cut
