@@ -4,7 +4,7 @@
       "Cees Hek <ceeshek@gmail.com>"
    ],
    "dynamic_config" : 0,
-   "generated_by" : "Dist::Zilla version 4.300039, CPAN::Meta::Converter version 2.132830",
+   "generated_by" : "Dist::Zilla version 5.006, CPAN::Meta::Converter version 2.120921",
    "license" : [
       "perl_5"
    ],
@@ -49,6 +49,6 @@
          "web" : "https://github.com/frioux/CGI-Application-Plugin-Session"
       }
    },
-   "version" : "1.04"
+   "version" : "1.05"
 }
 

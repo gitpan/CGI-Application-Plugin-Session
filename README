@@ -3,7 +3,7 @@ NAME
     CGI::Application
 
 VERSION
-    version 1.04
+    version 1.05
 
 SYNOPSIS
      use CGI::Application::Plugin::Session;
